@@ -347,6 +347,9 @@ class UsageClient:
         >>> psc_alt_base_client = amieclient.UsageClient(site_name='PSC', api_key='test_api_key', usage_url='https://amieclient.xsede.org/v0.20_beta/)
 
     """
+    # The Usage API User's Guide limits a POST to 256 KB; stay well under it.
+    MAX_POST_BYTES = 196608
+
     def __init__(self, site_name, api_key,
                  usage_url='https://usage.access-ci.org/api/v1'):
 
@@ -377,13 +380,13 @@ class UsageClient:
         individual UsageMessages, lists of UsageRecords, or even a single
         UsageRecord. Returns a list of UsageResponses
 
-        The API currently has a request size limit of 1024KiB. We get
-        ample room for overhead that may be added by intermediate layers
-        (reverse proxies, etc) by capping the size of the request we send
-        to 768KiB. This happens automatically, no need to chunk your usage
-        packets yourself. But this potential chunking means that we may get
-        more than one response, so for the sake of consistency this method
-        will return a list of responses.
+        The Usage API User's Guide limits a POST to 256 KB. We leave room
+        for overhead that may be added by intermediate layers (reverse
+        proxies, etc) by capping the size of the request we send to 192KiB.
+        This happens automatically, no need to chunk your usage packets
+        yourself. But this potential chunking means that we may get more
+        than one response, so for the sake of consistency this method will
+        return a list of responses.
 
         Args:
             usage_packets (UsageMessage, [UsageRecord], UsageRecord):
@@ -406,12 +409,13 @@ class UsageClient:
         # Get the size of the content
         content_length = int(prepped_req.headers.get('Content-Length'))
 
-        # Cap content_length at 786432 bytes
-        if content_length >= 786432:
+        # Cap content_length at MAX_POST_BYTES. A single record can't be
+        # split any further, so send it as-is.
+        if content_length >= self.MAX_POST_BYTES and len(pkt_list.records) > 1:
             # Get the safe number of safe chunks:
-            number_of_chunks = ceil(content_length / 786432)
+            number_of_chunks = ceil(content_length / self.MAX_POST_BYTES)
             # Get the size of those chunks
-            chunk_size = floor(len(pkt_list.records) / number_of_chunks)
+            chunk_size = max(1, floor(len(pkt_list.records) / number_of_chunks))
             results = list()
             for chunk in pkt_list._chunked(chunk_size=chunk_size):
                 # Send each chunk

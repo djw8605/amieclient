@@ -136,6 +136,32 @@ class TestUsageClientSend:
         sent = sum(len(r.json()['Records']) for r in requests_mock.request_history)
         assert sent == len(records)
 
+    def test_send_keeps_each_post_under_documented_limit(self, requests_mock):
+        # The Usage API guide says a POST can not exceed 256 KB.
+        requests_mock.post(USAGE_URL + 'usage/', json={
+            'Message': 'queued',
+            'ValidationFailedRecords': []
+        })
+        client = UsageClient(site_name='test', api_key='test')
+        records = [_compute_record(local_record_id=str(i), job_name='x' * 200)
+                   for i in range(3000)]
+
+        client.send(records)
+
+        for req in requests_mock.request_history:
+            assert len(req.body) < 256000
+
+    def test_send_single_oversized_record_is_sent_once(self, requests_mock):
+        requests_mock.post(USAGE_URL + 'usage/', json={
+            'Message': 'queued',
+            'ValidationFailedRecords': []
+        })
+        client = UsageClient(site_name='test', api_key='test')
+
+        client.send(_compute_record(job_name='x' * 300000))
+
+        assert requests_mock.call_count == 1
+
 
 class TestUsageClientFailedRecords:
 
