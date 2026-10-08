@@ -50,8 +50,9 @@ class FailedUsageResponse:
 
     @classmethod
     def from_dict(cls, input_dict):
+        # GET usage/failed returns the records under 'FailedRecords'.
         records = [UsageRecordError.from_dict(d) for d in
-                   input_dict.get('ValidationFailedRecords', [])]
+                   input_dict.get('FailedRecords', [])]
         return cls(failed_records=records)
 
     @classmethod
@@ -145,7 +146,7 @@ class UsageStatus:
         return [r.as_dict() for r in self.resources]
 
     def json(self, **json_kwargs):
-        return json.dumps(self.as_dict(), **json_kwargs)
+        return json.dumps(self.as_list(), **json_kwargs)
 
     def pretty_print(self):
         """
@@ -155,3 +156,75 @@ class UsageStatus:
 
     def __repr__(self):
         return "<UsageStatus: {n} resources>".format(n=len(self.resources))
+
+
+class UsageLoadedRecord:
+    """
+    A record that has been loaded into the accounting database, as
+    returned by GET usage/loaded.
+    """
+    def __init__(self, accounting_db_record_id, local_record_id, resource,
+                 submit_time, loaded_time, charge):
+        self.accounting_db_record_id = accounting_db_record_id
+        self.local_record_id = local_record_id
+        self.resource = resource
+        self.submit_time = submit_time
+        self.loaded_time = loaded_time
+        self.charge = charge
+
+    @classmethod
+    def from_dict(cls, input_dict):
+        return cls(
+            accounting_db_record_id=input_dict.get('AccountingDbRecordID'),
+            local_record_id=input_dict.get('LocalRecordID'),
+            resource=input_dict.get('Resource'),
+            submit_time=input_dict.get('SubmitTime'),
+            loaded_time=input_dict.get('LoadedTime'),
+            charge=input_dict.get('Charge'),
+        )
+
+    def as_dict(self):
+        return {
+            'AccountingDbRecordID': self.accounting_db_record_id,
+            'LocalRecordID': self.local_record_id,
+            'Resource': self.resource,
+            'SubmitTime': self.submit_time,
+            'LoadedTime': self.loaded_time,
+            'Charge': self.charge,
+        }
+
+    def __repr__(self):
+        return "<UsageLoadedRecord: {s.resource} local_record_id={s.local_record_id}>".format(s=self)
+
+
+class UsageLoaded:
+    """
+    Response from GET usage/loaded: a list of loaded records.
+    """
+    def __init__(self, records):
+        self.records = records
+
+    @classmethod
+    def from_dict(cls, input_dict):
+        records = [UsageLoadedRecord.from_dict(d) for d in input_dict.get('Records', [])]
+        return cls(records=records)
+
+    @classmethod
+    def from_json(cls, input_json):
+        d = json.loads(input_json)
+        return cls.from_dict(d)
+
+    def as_dict(self):
+        return {'Records': [r.as_dict() for r in self.records]}
+
+    def json(self, **json_kwargs):
+        return json.dumps(self.as_dict(), **json_kwargs)
+
+    def pretty_print(self):
+        """
+        prints() a pretty version of the JSON of this response
+        """
+        print(self.json(indent=4, sort_keys=True))
+
+    def __repr__(self):
+        return "<UsageLoaded: {n} records>".format(n=len(self.records))

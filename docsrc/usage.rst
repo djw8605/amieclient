@@ -73,3 +73,17 @@ they are sent as well, grouped by the error that occured.
 
 .. autoclass:: amieclient.usage.response.UsageStatusResource
    :members:
+
+
+Checking loaded records
+-----------------------
+To confirm that records made it into the accounting database, use the loaded() method.
+It takes optional min_loaded_time, limit, offset, and local_record_id parameters. The API
+returns at most 25,000 records per request, ordered by load time, so use offset to page
+through more. The API currently only reports Compute usage here.
+
+.. autoclass:: amieclient.usage.response.UsageLoaded
+   :members:
+
+.. autoclass:: amieclient.usage.response.UsageLoadedRecord
+   :members:

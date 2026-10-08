@@ -109,7 +109,7 @@ class ComputeUsageRecord(UsageRecord):
         self.attributes = ComputeUsageAttributes(node_count, cpu_core_count,
                                                  job_name, memory, queue)
 
-        self.parent_record_id = parent_record_id,
+        self.parent_record_id = parent_record_id
         self.charge = charge
         self.end_time = end_time
         self.local_project_id = local_project_id
